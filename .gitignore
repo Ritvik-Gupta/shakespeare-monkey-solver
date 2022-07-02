@@ -1,0 +1,6 @@
+.vscode
+
+/target
+Cargo.lock
+
+docs/shakespeare_monkey_solver*
