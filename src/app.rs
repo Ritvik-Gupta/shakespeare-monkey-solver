@@ -38,44 +38,97 @@ impl epi::App for TemplateApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &epi::Frame) {
-        egui::SidePanel::left("population-form")
+        egui::SidePanel::left("config-panel")
             .resizable(false)
             .show(ctx, |ui| {
-                ui.heading("Simulation Form");
+                egui::Grid::new("config-panel-grid")
+                    .num_columns(2)
+                    .striped(true)
+                    .spacing([0.0, 0.0])
+                    .show(ui, |ui| {
+                        ui.vertical(|ui| {
+                            ui.heading("Simulation Form");
 
-                ui.vertical_centered_justified(|ui| {
-                    ui.label("Enter a Term: ");
-                    let target = &mut self.population_form.target_term;
-                    ui.text_edit_singleline(target);
-                    if target.len() > 20 {
-                        *target = target[..20].to_string();
-                    }
-                });
+                            ui.vertical_centered_justified(|ui| {
+                                ui.label("Enter a Term: ");
+                                ui.text_edit_singleline(&mut self.population_form.target_term);
+                            });
 
-                ui.add(
-                    egui::Slider::new(&mut self.population_form.mutation_rate, 0..=100)
-                        .text("Mut Rate")
-                        .suffix("%"),
-                );
+                            ui.add(
+                                egui::Slider::new(&mut self.population_form.mutation_rate, 0..=100)
+                                    .text("Mut Rate")
+                                    .suffix("%"),
+                            );
 
-                ui.add(
-                    egui::Slider::new(&mut self.population_form.population_size, 10..=200)
-                        .text("Pop Size"),
-                );
+                            ui.add(
+                                egui::Slider::new(
+                                    &mut self.population_form.population_size,
+                                    10..=200,
+                                )
+                                .text("Pop Size"),
+                            );
 
-                let simulation_button = ui.add_enabled(
-                    self.is_valid_form_state()
-                        && self
-                            .running_simulation
-                            .as_ref()
-                            .map(|simulation| self.population_form != simulation)
-                            .unwrap_or(true),
-                    egui::Button::new("Create Simulation"),
-                );
+                            let simulation_button = ui.add_enabled(
+                                self.is_valid_form_state()
+                                    && self
+                                        .running_simulation
+                                        .as_ref()
+                                        .map(|simulation| self.population_form != simulation)
+                                        .unwrap_or(true),
+                                egui::Button::new("Create Simulation"),
+                            );
 
-                if simulation_button.clicked() {
-                    self.running_simulation = Some(self.population_form.create_simulation())
-                }
+                            if simulation_button.clicked() {
+                                self.running_simulation =
+                                    Some(self.population_form.create_simulation())
+                            }
+                        });
+
+                        ui.end_row();
+
+                        if let Some(simulation) = &self.running_simulation {
+                            ui.vertical_centered(|ui| {
+                                ui.horizontal_wrapped(|ui| {
+                                    ui.label("Mutation Rate: ");
+                                    ui.label(
+                                        egui::RichText::new(
+                                            (simulation.mutation_rate as f64 / 100.0).to_string(),
+                                        )
+                                        .color(egui::Color32::LIGHT_GRAY),
+                                    );
+                                });
+
+                                ui.horizontal_wrapped(|ui| {
+                                    ui.label("Population Size: ");
+                                    ui.label(
+                                        egui::RichText::new(
+                                            simulation.population.len().to_string(),
+                                        )
+                                        .color(egui::Color32::LIGHT_GRAY),
+                                    );
+                                });
+
+                                ui.horizontal_wrapped(|ui| {
+                                    ui.label("Generation: ");
+                                    ui.label(
+                                        egui::RichText::new(simulation.generations.to_string())
+                                            .color(egui::Color32::LIGHT_GRAY),
+                                    );
+                                });
+
+                                ui.horizontal_wrapped(|ui| {
+                                    ui.label("Target: ");
+                                    ui.label(
+                                        egui::RichText::new(&simulation.target_term)
+                                            .color(egui::Color32::KHAKI),
+                                    );
+                                });
+                            });
+                            if !simulation.finished {
+                                ui.add(egui::Spinner::new());
+                            }
+                        }
+                    });
             });
 
         if let Some(simulation) = &mut self.running_simulation {
