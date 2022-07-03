@@ -9,14 +9,19 @@ pub struct PopulationForm {
 
 impl PopulationForm {
     pub fn create_simulation(&mut self) -> Population {
-        Population {
-            population: std::iter::repeat_with(|| Dna::crate_random_genes(self.target_term.len()))
+        let population: Vec<_> =
+            std::iter::repeat_with(|| Dna::crate_random_genes(self.target_term.len()))
                 .take(self.population_size)
-                .collect(),
-            generations: 0,
-            finished: false,
+                .collect();
+
+        Population {
+            next_gen_population: population.clone(),
+            population,
             target_term: self.target_term.clone(),
+            generations: 0,
             mutation_rate: self.mutation_rate,
+            best_dna: None,
+            total_fitness: None,
         }
     }
 }
@@ -31,89 +36,65 @@ impl PartialEq<&Population> for PopulationForm {
 
 use dna::Dna;
 
-#[derive(Debug)]
 pub struct Population {
+    next_gen_population: Vec<Dna>,
+    pub population: Vec<Dna>,
     pub target_term: String,
     pub mutation_rate: usize,
-    pub population: Vec<Dna>,
     pub generations: usize,
-    pub finished: bool,
+    pub best_dna: Option<String>,
+    pub total_fitness: Option<f64>,
 }
 
-impl Population {}
+impl Population {
+    pub fn compute_biased_fitness_if_not_finished(&mut self) -> bool {
+        let mut total_fitness = 0.0;
+        for dna in self.population.iter_mut() {
+            let fitness = dna.compute_fitness(&self.target_term);
+            if fitness == self.target_term.len() {
+                return true;
+            }
+
+            dna.biased_fitness = Some(fitness as f64);
+            total_fitness += fitness as f64;
+        }
+
+        self.total_fitness = Some(total_fitness);
+        false
+    }
+
+    pub fn update_generation(&mut self) {
+        use rand::distributions::WeightedIndex;
+
+        let weighted_indices = WeightedIndex::new(
+            self.population
+                .iter()
+                .map(|dna| dna.biased_fitness.unwrap()),
+        )
+        .unwrap();
+
+        for i in 0..self.population.len() {
+            let mut dna = Dna::crossover(
+                self.pool_selection(&weighted_indices),
+                self.pool_selection(&weighted_indices),
+            );
+            dna.mutate(self.mutation_rate);
+            self.next_gen_population[i] = dna;
+        }
+
+        std::mem::swap(&mut self.population, &mut self.next_gen_population);
+        self.total_fitness = None;
+        self.generations += 1;
+    }
+
+    fn pool_selection(&self, weighted_indices: &rand::distributions::WeightedIndex<f64>) -> &Dna {
+        use rand::prelude::Distribution;
+
+        &self.population[weighted_indices.sample(&mut rand::thread_rng())]
+    }
+}
 
 /*
-
-class Population {
-  constructor(p, m, num) {
-    this.population; // Array to hold the current population
-    this.matingPool; // ArrayList which we will use for our "mating pool"
-    this.generations = 0; // Number of generations
-    this.finished = false; // Are we finished evolving?
-    this.target = p; // Target phrase
-    this.mutationRate = m; // Mutation rate
-    this.perfectScore = 1;
-
-    this.best = "";
-
-    this.population = [];
-    for (let i = 0; i < num; i++) {
-      this.population[i] = new DNA(this.target.length);
-    }
-    this.matingPool = [];
-    this.calcFitness();
-  }
-
-  // Fill our fitness array with a value for every member of the population
-  calcFitness() {
-    for (let i = 0; i < this.population.length; i++) {
-      this.population[i].calcFitness(target);
-    }
-  }
-
-  // Generate a mating pool
-  naturalSelection() {
-    // Clear the ArrayList
-    this.matingPool = [];
-
-    let maxFitness = 0;
-    for (let i = 0; i < this.population.length; i++) {
-      if (this.population[i].fitness > maxFitness) {
-        maxFitness = this.population[i].fitness;
-      }
-    }
-
-    // Based on fitness, each member will get added to the mating pool a certain number of times
-    // a higher fitness = more entries to mating pool = more likely to be picked as a parent
-    // a lower fitness = fewer entries to mating pool = less likely to be picked as a parent
-    for (let i = 0; i < this.population.length; i++) {
-      let fitness = map(this.population[i].fitness, 0, maxFitness, 0, 1);
-      let n = floor(fitness * 100); // Arbitrary multiplier, we can also use monte carlo method
-      for (let j = 0; j < n; j++) {
-        // and pick two random numbers
-        this.matingPool.push(this.population[i]);
-      }
-    }
-  }
-
-  // Create a new generation
-  generate() {
-    // Refill the population with children from the mating pool
-    for (let i = 0; i < this.population.length; i++) {
-      let a = floor(random(this.matingPool.length));
-      let b = floor(random(this.matingPool.length));
-      let partnerA = this.matingPool[a];
-      let partnerB = this.matingPool[b];
-      let child = partnerA.crossover(partnerB);
-      child.mutate(this.mutationRate);
-      this.population[i] = child;
-    }
-    this.generations++;
-  }
-
-  getBest() {
-    return this.best;
-  }
 
   // Compute the current "most fit" member of the population
   evaluate() {

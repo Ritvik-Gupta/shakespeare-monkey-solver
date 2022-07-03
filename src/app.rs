@@ -38,6 +38,17 @@ impl epi::App for TemplateApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &epi::Frame) {
+        let has_sim_finished = match &mut self.running_simulation {
+            Some(simulation) => {
+                let has_sim_finished = simulation.compute_biased_fitness_if_not_finished();
+                if !has_sim_finished {
+                    simulation.update_generation();
+                }
+                has_sim_finished
+            }
+            None => false,
+        };
+
         egui::SidePanel::left("config-panel")
             .resizable(false)
             .show(ctx, |ui| {
@@ -63,7 +74,7 @@ impl epi::App for TemplateApp {
                             ui.add(
                                 egui::Slider::new(
                                     &mut self.population_form.population_size,
-                                    10..=200,
+                                    10..=1000,
                                 )
                                 .text("Pop Size"),
                             );
@@ -86,7 +97,7 @@ impl epi::App for TemplateApp {
 
                         ui.end_row();
 
-                        if let Some(simulation) = &self.running_simulation {
+                        if let Some(simulation) = &mut self.running_simulation {
                             ui.vertical_centered(|ui| {
                                 ui.horizontal_wrapped(|ui| {
                                     ui.label("Mutation Rate: ");
@@ -124,7 +135,7 @@ impl epi::App for TemplateApp {
                                     );
                                 });
                             });
-                            if !simulation.finished {
+                            if !has_sim_finished {
                                 ui.add(egui::Spinner::new());
                             }
                         }
@@ -135,7 +146,17 @@ impl epi::App for TemplateApp {
             egui::CentralPanel::default().show(ctx, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     for dna in simulation.population.iter() {
-                        ui.label(dna.genes.iter().collect::<String>());
+                        ui.horizontal(|ui| {
+                            ui.spacing_mut().item_spacing.x = 0.0;
+
+                            for (idx, token) in simulation.target_term.char_indices() {
+                                let mut label = egui::RichText::new(dna.genes[idx]);
+                                if token == dna.genes[idx] {
+                                    label = label.color(egui::Color32::LIGHT_GREEN);
+                                }
+                                ui.label(label);
+                            }
+                        });
                         ui.separator();
                     }
                 });
@@ -149,7 +170,7 @@ impl TemplateApp {
         let form = &self.population_form;
 
         (0..=100).contains(&form.mutation_rate)
-            && (10..=200).contains(&form.population_size)
+            && (10..=1000).contains(&form.population_size)
             && form.target_term.len() > 0
     }
 }

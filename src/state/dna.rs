@@ -1,3 +1,23 @@
+const fn generate_charset() -> [char; 53] {
+    let mut charset = [' '; 53];
+
+    let mut i = 0;
+    while i < 26 {
+        charset[i] = (i as u8 + b'a') as char;
+        i += 1;
+    }
+
+    let mut i = 0;
+    while i < 26 {
+        charset[i + 27] = (i as u8 + b'A') as char;
+        i += 1;
+    }
+
+    charset
+}
+
+static CHARSET: [char; 53] = generate_charset();
+
 #[cfg(target_arch = "wasm32")]
 fn gen_random_char() -> char {
     'a'
@@ -6,13 +26,14 @@ fn gen_random_char() -> char {
 #[cfg(not(target_arch = "wasm32"))]
 fn gen_random_char() -> char {
     use rand::Rng;
-    rand::thread_rng().sample(rand::distributions::Alphanumeric) as char
+
+    CHARSET[rand::thread_rng().gen_range(0..CHARSET.len())]
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Dna {
     pub genes: Vec<char>,
-    pub fitness: usize,
+    pub biased_fitness: Option<f64>,
 }
 
 impl Dna {
@@ -21,42 +42,47 @@ impl Dna {
             genes: std::iter::repeat_with(gen_random_char)
                 .take(num_genes)
                 .collect(),
-            fitness: 0,
+            biased_fitness: None,
         }
     }
+
+    pub fn compute_fitness(&mut self, target_term: &String) -> usize {
+        target_term
+            .char_indices()
+            .filter(|&(idx, token)| self.genes[idx] == token)
+            .count()
+    }
+
+    pub fn crossover(partner_a: &Self, partner_b: &Self) -> Self {
+        use rand::Rng;
+
+        let mut child = Self {
+            genes: Vec::with_capacity(partner_a.genes.len()),
+            biased_fitness: None,
+        };
+
+        let mut rng = rand::thread_rng();
+        let midpoint = rng.gen_range(0..partner_a.genes.len());
+
+        for i in 0..partner_a.genes.len() {
+            child.genes.push(if i > midpoint {
+                partner_a.genes[i]
+            } else {
+                partner_b.genes[i]
+            });
+        }
+
+        child
+    }
+
+    pub fn mutate(&mut self, mutation_rate: usize) {
+        use rand::Rng;
+
+        let mut rng = rand::thread_rng();
+        self.genes.iter_mut().for_each(|gene| {
+            if rng.gen_range(0..=100) < mutation_rate {
+                *gene = gen_random_char();
+            }
+        });
+    }
 }
-//     // Fitness function (returns floating point % of "correct" characters)
-//     calcFitness(target) {
-//       let score = 0;
-//       for (let i = 0; i < this.genes.length; i++) {
-//         if (this.genes[i] == target.charAt(i)) {
-//           score++;
-//         }
-//       }
-//       this.fitness = score / target.length;
-//     }
-
-//     // Crossover
-//     crossover(partner) {
-//       // A new child
-//       let child = new DNA(this.genes.length);
-
-//       let midpoint = floor(random(this.genes.length)); // Pick a midpoint
-
-//       // Half from one, half from the other
-//       for (let i = 0; i < this.genes.length; i++) {
-//         if (i > midpoint) child.genes[i] = this.genes[i];
-//         else child.genes[i] = partner.genes[i];
-//       }
-//       return child;
-//     }
-
-//     // Based on a mutation probability, picks a new random character
-//     mutate(mutationRate) {
-//       for (let i = 0; i < this.genes.length; i++) {
-//         if (random(1) < mutationRate) {
-//           this.genes[i] = newChar();
-//         }
-//       }
-//     }
-//   }
