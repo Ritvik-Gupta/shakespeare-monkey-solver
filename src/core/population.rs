@@ -1,4 +1,5 @@
 use super::{biased_scale::BiasedScale, dna::Dna};
+use crate::utils::random::{Random, WeightedIndices};
 
 pub struct Population {
     pub(super) next_gen_population: Vec<Dna>,
@@ -35,14 +36,11 @@ impl Population {
     }
 
     pub fn update_generation(&mut self) {
-        use rand::distributions::WeightedIndex;
-
-        let weighted_indices = WeightedIndex::new(
+        let weighted_indices = WeightedIndices::create(
             self.population
                 .iter()
                 .map(|candidate| candidate.biased_fitness),
-        )
-        .expect("weighted index cannot be created");
+        );
 
         for i in 0..self.population.len() {
             let mut child_candidate = Dna::crossover(
@@ -56,9 +54,7 @@ impl Population {
         std::mem::swap(&mut self.population, &mut self.next_gen_population);
     }
 
-    fn pool_selection(&self, weighted_indices: &rand::distributions::WeightedIndex<f64>) -> &Dna {
-        use rand::prelude::Distribution;
-
-        &self.population[weighted_indices.sample(&mut rand::thread_rng())]
+    fn pool_selection(&self, weighted_indices: &WeightedIndices) -> &Dna {
+        &self.population[weighted_indices.sample(&mut Random::new())]
     }
 }

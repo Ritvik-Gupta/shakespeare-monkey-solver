@@ -1,10 +1,10 @@
+mod state;
+
 use eframe::{egui, epi};
 use state::{
     biased_scale::BiasedScaleStore::*, population_builder::PopulationBuilder,
     population_store::PopulationStore,
 };
-
-mod state;
 
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 #[derive(Default)]
