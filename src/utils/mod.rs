@@ -1,5 +1,3 @@
-
-
 #[cfg(not(target_arch = "wasm32"))]
 pub mod random {
     use rand::distributions::WeightedIndex;

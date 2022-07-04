@@ -39,11 +39,30 @@ impl epi::App for TemplateApp {
 
     fn update(&mut self, ctx: &egui::Context, _frame: &epi::Frame) {
         if let Some(simulation) = &mut self.running_simulation {
-            simulation.compute_biased_fitness();
+            simulation.simulate_generation();
             if !simulation.has_finished {
-                simulation.update_generation();
                 ctx.request_repaint();
             }
+        }
+
+        if let Some(simulation) = &mut self.running_simulation {
+            egui::Window::new("Fitness Plot").show(ctx, |ui| {
+                egui::plot::Plot::new("best-generation-fitness-plot")
+                    .include_x(0.0)
+                    .include_y(0.0)
+                    .include_y(simulation.target_term.len() as f64)
+                    .view_aspect(2.0)
+                    .allow_drag(false)
+                    .allow_zoom(false)
+                    .show_background(false)
+                    .show(ui, |ui| {
+                        ui.line(egui::plot::Line::new(egui::plot::Values::from_values_iter(
+                            simulation.best_generation_fitness.iter().enumerate().map(
+                                |(idx, &best)| egui::plot::Value::new(idx as f64, best as f64),
+                            ),
+                        )));
+                    });
+            });
         }
 
         egui::SidePanel::left("config-panel")
@@ -75,7 +94,7 @@ impl epi::App for TemplateApp {
                                     .text("Pop Size"),
                             );
 
-                            egui::ComboBox::new("", "Biased Scale")
+                            egui::ComboBox::new("biased-scale-dropdown", "Biased Scale")
                                 .selected_text(format!("Bias: {:?}", form.biased_scale))
                                 .show_ui(ui, |ui| {
                                     ui.selectable_value(
@@ -110,13 +129,20 @@ impl epi::App for TemplateApp {
                             };
                             ui.add(slider);
 
+                            let simulation_has_finished = self
+                                .running_simulation
+                                .as_ref()
+                                .map(|simulation| simulation.has_finished)
+                                .unwrap_or(false);
+
+                            let form_state_has_changed = self
+                                .running_simulation
+                                .as_ref()
+                                .map(|simulation| self.population_form != simulation)
+                                .unwrap_or(true);
+
                             let simulation_button = ui.add_enabled(
-                                self.is_valid_form_state()
-                                    && self
-                                        .running_simulation
-                                        .as_ref()
-                                        .map(|simulation| self.population_form != simulation)
-                                        .unwrap_or(true),
+                                simulation_has_finished || form_state_has_changed,
                                 egui::Button::new("Create Simulation"),
                             );
 
@@ -211,15 +237,5 @@ impl epi::App for TemplateApp {
                 });
             });
         }
-    }
-}
-
-impl TemplateApp {
-    fn is_valid_form_state(&self) -> bool {
-        let form = &self.population_form;
-
-        (0..=50).contains(&form.mutation_rate)
-            && (10..=500).contains(&form.population_size)
-            && form.target_term.len() > 0
     }
 }

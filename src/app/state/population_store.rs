@@ -1,4 +1,4 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 use crate::core::population::Population;
 
@@ -6,6 +6,7 @@ pub struct PopulationStore {
     pub store: Population,
     pub generation_counter: usize,
     pub best_candidate: usize,
+    pub best_generation_fitness: Vec<usize>,
     pub has_finished: bool,
 }
 
@@ -17,14 +18,8 @@ impl Deref for PopulationStore {
     }
 }
 
-impl DerefMut for PopulationStore {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.store
-    }
-}
-
 impl PopulationStore {
-    pub fn compute_biased_fitness(&mut self) {
+    fn compute_biased_fitness_and_best_candidate(&mut self) {
         self.store.compute_biased_fitness();
 
         let pop = &self.store.population;
@@ -40,8 +35,18 @@ impl PopulationStore {
         }
     }
 
-    pub fn update_generation(&mut self) {
-        self.store.update_generation();
-        self.generation_counter += 1;
+    pub fn simulate_generation(&mut self) {
+        if self.has_finished {
+            return;
+        }
+
+        self.compute_biased_fitness_and_best_candidate();
+        self.best_generation_fitness
+            .push(self.store.population[self.best_candidate].fitness);
+
+        if !self.has_finished {
+            self.store.update_generation();
+            self.generation_counter += 1;
+        }
     }
 }

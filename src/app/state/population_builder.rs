@@ -2,13 +2,24 @@ use super::{biased_scale::BiasedScaleStore, population_store::PopulationStore};
 use crate::core::population::Population;
 
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
-#[derive(Default)]
 pub struct PopulationBuilder {
     pub target_term: String,
     pub mutation_rate: usize,
     pub population_size: usize,
     pub biased_scale: BiasedScaleStore,
     pub scale_factor: f64,
+}
+
+impl Default for PopulationBuilder {
+    fn default() -> Self {
+        Self {
+            target_term: "Hello World".to_owned(),
+            mutation_rate: 4,
+            population_size: 50,
+            biased_scale: Default::default(),
+            scale_factor: 1.4,
+        }
+    }
 }
 
 impl PopulationBuilder {
@@ -23,6 +34,7 @@ impl PopulationBuilder {
             generation_counter: 0,
             best_candidate: 0,
             has_finished: false,
+            best_generation_fitness: Vec::new(),
         }
     }
 }
