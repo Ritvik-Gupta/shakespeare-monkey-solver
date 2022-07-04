@@ -1,66 +1,30 @@
-pub mod dna;
-
-#[derive(Default)]
-pub struct PopulationForm {
-    pub target_term: String,
-    pub mutation_rate: usize,
-    pub population_size: usize,
-}
-
-impl PopulationForm {
-    pub fn create_simulation(&mut self) -> Population {
-        let population: Vec<_> =
-            std::iter::repeat_with(|| Dna::crate_random_genes(self.target_term.len()))
-                .take(self.population_size)
-                .collect();
-
-        Population {
-            next_gen_population: population.clone(),
-            population,
-            target_term: self.target_term.clone(),
-            generations: 0,
-            mutation_rate: self.mutation_rate,
-            best_dna: None,
-            total_fitness: None,
-        }
-    }
-}
-
-impl PartialEq<&Population> for PopulationForm {
-    fn eq(&self, other: &&Population) -> bool {
-        self.population_size == other.population.len()
-            && self.target_term == other.target_term
-            && self.mutation_rate == other.mutation_rate
-    }
-}
-
-use dna::Dna;
+use super::dna::Dna;
 
 pub struct Population {
-    next_gen_population: Vec<Dna>,
+    pub(super) next_gen_population: Vec<Dna>,
     pub population: Vec<Dna>,
     pub target_term: String,
     pub mutation_rate: usize,
-    pub generations: usize,
-    pub best_dna: Option<String>,
-    pub total_fitness: Option<f64>,
 }
 
 impl Population {
-    pub fn compute_biased_fitness_if_not_finished(&mut self) -> bool {
-        let mut total_fitness = 0.0;
-        for dna in self.population.iter_mut() {
-            let fitness = dna.compute_fitness(&self.target_term);
-            if fitness == self.target_term.len() {
-                return true;
-            }
-
-            dna.biased_fitness = Some(fitness as f64);
-            total_fitness += fitness as f64;
+    pub fn new(target_term: String, mutation_rate: usize, population_size: usize) -> Self {
+        let population = std::iter::repeat_with(|| Dna::crate_random_genes(target_term.len()))
+            .take(population_size)
+            .collect::<Vec<_>>();
+        Self {
+            next_gen_population: population.clone(),
+            population,
+            mutation_rate,
+            target_term,
         }
+    }
 
-        self.total_fitness = Some(total_fitness);
-        false
+    pub fn compute_biased_fitness(&mut self) {
+        for candidate in self.population.iter_mut() {
+            let fitness = candidate.compute_fitness(&self.target_term);
+            candidate.biased_fitness = fitness as f64;
+        }
     }
 
     pub fn update_generation(&mut self) {
@@ -69,22 +33,20 @@ impl Population {
         let weighted_indices = WeightedIndex::new(
             self.population
                 .iter()
-                .map(|dna| dna.biased_fitness.unwrap()),
+                .map(|candidate| candidate.biased_fitness),
         )
-        .unwrap();
+        .expect("weighted index cannot be created");
 
         for i in 0..self.population.len() {
-            let mut dna = Dna::crossover(
+            let mut child_candidate = Dna::crossover(
                 self.pool_selection(&weighted_indices),
                 self.pool_selection(&weighted_indices),
             );
-            dna.mutate(self.mutation_rate);
-            self.next_gen_population[i] = dna;
+            child_candidate.mutate(self.mutation_rate);
+            self.next_gen_population[i] = child_candidate;
         }
 
         std::mem::swap(&mut self.population, &mut self.next_gen_population);
-        self.total_fitness = None;
-        self.generations += 1;
     }
 
     fn pool_selection(&self, weighted_indices: &rand::distributions::WeightedIndex<f64>) -> &Dna {

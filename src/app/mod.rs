@@ -1,6 +1,7 @@
 use eframe::{egui, epi};
+use state::{population_builder::PopulationBuilder, population_store::PopulationStore};
 
-use crate::state::{Population, PopulationForm};
+mod state;
 
 #[cfg_attr(
     feature = "persistence",
@@ -9,10 +10,10 @@ use crate::state::{Population, PopulationForm};
 )]
 #[derive(Default)]
 pub struct TemplateApp {
-    population_form: PopulationForm,
+    population_form: PopulationBuilder,
 
     #[cfg_attr(feature = "persistence", serde(skip))]
-    running_simulation: Option<Population>,
+    running_simulation: Option<PopulationStore>,
 }
 
 impl epi::App for TemplateApp {
@@ -38,16 +39,12 @@ impl epi::App for TemplateApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &epi::Frame) {
-        let has_sim_finished = match &mut self.running_simulation {
-            Some(simulation) => {
-                let has_sim_finished = simulation.compute_biased_fitness_if_not_finished();
-                if !has_sim_finished {
-                    simulation.update_generation();
-                }
-                has_sim_finished
+        if let Some(simulation) = &mut self.running_simulation {
+            simulation.compute_biased_fitness();
+            if !simulation.has_finished {
+                simulation.update_generation();
             }
-            None => false,
-        };
+        }
 
         egui::SidePanel::left("config-panel")
             .resizable(false)
@@ -55,7 +52,7 @@ impl epi::App for TemplateApp {
                 egui::Grid::new("config-panel-grid")
                     .num_columns(2)
                     .striped(true)
-                    .spacing([0.0, 0.0])
+                    .spacing([10.0, 10.0])
                     .show(ui, |ui| {
                         ui.vertical(|ui| {
                             ui.heading("Simulation Form");
@@ -66,7 +63,7 @@ impl epi::App for TemplateApp {
                             });
 
                             ui.add(
-                                egui::Slider::new(&mut self.population_form.mutation_rate, 0..=100)
+                                egui::Slider::new(&mut self.population_form.mutation_rate, 0..=50)
                                     .text("Mut Rate")
                                     .suffix("%"),
                             );
@@ -74,7 +71,7 @@ impl epi::App for TemplateApp {
                             ui.add(
                                 egui::Slider::new(
                                     &mut self.population_form.population_size,
-                                    10..=1000,
+                                    10..=500,
                                 )
                                 .text("Pop Size"),
                             );
@@ -91,7 +88,7 @@ impl epi::App for TemplateApp {
 
                             if simulation_button.clicked() {
                                 self.running_simulation =
-                                    Some(self.population_form.create_simulation())
+                                    Some(self.population_form.build_simulation())
                             }
                         });
 
@@ -102,9 +99,10 @@ impl epi::App for TemplateApp {
                                 ui.horizontal_wrapped(|ui| {
                                     ui.label("Mutation Rate: ");
                                     ui.label(
-                                        egui::RichText::new(
-                                            (simulation.mutation_rate as f64 / 100.0).to_string(),
-                                        )
+                                        egui::RichText::new(format!(
+                                            "{}%",
+                                            simulation.mutation_rate
+                                        ))
                                         .color(egui::Color32::LIGHT_GRAY),
                                     );
                                 });
@@ -122,8 +120,10 @@ impl epi::App for TemplateApp {
                                 ui.horizontal_wrapped(|ui| {
                                     ui.label("Generation: ");
                                     ui.label(
-                                        egui::RichText::new(simulation.generations.to_string())
-                                            .color(egui::Color32::LIGHT_GRAY),
+                                        egui::RichText::new(
+                                            simulation.generation_counter.to_string(),
+                                        )
+                                        .color(egui::Color32::LIGHT_GRAY),
                                     );
                                 });
 
@@ -135,7 +135,7 @@ impl epi::App for TemplateApp {
                                     );
                                 });
                             });
-                            if !has_sim_finished {
+                            if !simulation.has_finished {
                                 ui.add(egui::Spinner::new());
                             }
                         }
@@ -144,14 +144,30 @@ impl epi::App for TemplateApp {
 
         if let Some(simulation) = &mut self.running_simulation {
             egui::CentralPanel::default().show(ctx, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.visuals_mut().dark_mode = false;
+                    ui.label(
+                        egui::RichText::new(
+                            simulation.population[simulation.best_candidate]
+                                .genes
+                                .iter()
+                                .collect::<String>(),
+                        )
+                        .underline()
+                        .color(egui::Color32::GOLD),
+                    );
+                });
+                ui.separator();
+                ui.separator();
+
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    for dna in simulation.population.iter() {
+                    for candidate in simulation.population.iter() {
                         ui.horizontal(|ui| {
                             ui.spacing_mut().item_spacing.x = 0.0;
 
                             for (idx, token) in simulation.target_term.char_indices() {
-                                let mut label = egui::RichText::new(dna.genes[idx]);
-                                if token == dna.genes[idx] {
+                                let mut label = egui::RichText::new(candidate.genes[idx]);
+                                if token == candidate.genes[idx] {
                                     label = label.color(egui::Color32::LIGHT_GREEN);
                                 }
                                 ui.label(label);
@@ -169,8 +185,8 @@ impl TemplateApp {
     fn is_valid_form_state(&self) -> bool {
         let form = &self.population_form;
 
-        (0..=100).contains(&form.mutation_rate)
-            && (10..=1000).contains(&form.population_size)
+        (0..=50).contains(&form.mutation_rate)
+            && (10..=500).contains(&form.population_size)
             && form.target_term.len() > 0
     }
 }

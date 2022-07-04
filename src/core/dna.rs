@@ -33,7 +33,8 @@ fn gen_random_char() -> char {
 #[derive(Clone, Debug)]
 pub struct Dna {
     pub genes: Vec<char>,
-    pub biased_fitness: Option<f64>,
+    pub fitness: usize,
+    pub biased_fitness: f64,
 }
 
 impl Dna {
@@ -42,15 +43,17 @@ impl Dna {
             genes: std::iter::repeat_with(gen_random_char)
                 .take(num_genes)
                 .collect(),
-            biased_fitness: None,
+            fitness: 0,
+            biased_fitness: 0.0,
         }
     }
 
     pub fn compute_fitness(&mut self, target_term: &String) -> usize {
-        target_term
+        self.fitness = target_term
             .char_indices()
             .filter(|&(idx, token)| self.genes[idx] == token)
-            .count()
+            .count();
+        self.fitness
     }
 
     pub fn crossover(partner_a: &Self, partner_b: &Self) -> Self {
@@ -58,7 +61,8 @@ impl Dna {
 
         let mut child = Self {
             genes: Vec::with_capacity(partner_a.genes.len()),
-            biased_fitness: None,
+            fitness: 0,
+            biased_fitness: 0.0,
         };
 
         let mut rng = rand::thread_rng();

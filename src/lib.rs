@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), deny(warnings))]
 
 mod app;
-pub mod state;
+pub mod core;
 pub use app::TemplateApp;
 
 // ----------------------------------------------------------------------------
