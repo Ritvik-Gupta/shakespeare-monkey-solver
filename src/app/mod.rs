@@ -1,13 +1,12 @@
 use eframe::{egui, epi};
-use state::{population_builder::PopulationBuilder, population_store::PopulationStore};
+use state::{
+    biased_scale::BiasedScaleStore::*, population_builder::PopulationBuilder,
+    population_store::PopulationStore,
+};
 
 mod state;
 
-#[cfg_attr(
-    feature = "persistence",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(default)
-)]
+#[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 #[derive(Default)]
 pub struct TemplateApp {
     population_form: PopulationBuilder,
@@ -43,6 +42,7 @@ impl epi::App for TemplateApp {
             simulation.compute_biased_fitness();
             if !simulation.has_finished {
                 simulation.update_generation();
+                ctx.request_repaint();
             }
         }
 
@@ -50,31 +50,65 @@ impl epi::App for TemplateApp {
             .resizable(false)
             .show(ctx, |ui| {
                 egui::Grid::new("config-panel-grid")
-                    .num_columns(2)
+                    .num_columns(1)
                     .striped(true)
                     .spacing([10.0, 10.0])
                     .show(ui, |ui| {
                         ui.vertical(|ui| {
+                            let form = &mut self.population_form;
+
                             ui.heading("Simulation Form");
 
                             ui.vertical_centered_justified(|ui| {
                                 ui.label("Enter a Term: ");
-                                ui.text_edit_singleline(&mut self.population_form.target_term);
+                                ui.text_edit_singleline(&mut form.target_term);
                             });
 
                             ui.add(
-                                egui::Slider::new(&mut self.population_form.mutation_rate, 0..=50)
+                                egui::Slider::new(&mut form.mutation_rate, 0..=50)
                                     .text("Mut Rate")
                                     .suffix("%"),
                             );
 
                             ui.add(
-                                egui::Slider::new(
-                                    &mut self.population_form.population_size,
-                                    10..=500,
-                                )
-                                .text("Pop Size"),
+                                egui::Slider::new(&mut form.population_size, 10..=500)
+                                    .text("Pop Size"),
                             );
+
+                            egui::ComboBox::new("", "Biased Scale")
+                                .selected_text(format!("Bias: {:?}", form.biased_scale))
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(
+                                        &mut form.biased_scale,
+                                        Multiplicative,
+                                        format!("{:?}", Multiplicative),
+                                    );
+                                    ui.selectable_value(
+                                        &mut form.biased_scale,
+                                        Order,
+                                        format!("{:?}", Order),
+                                    );
+                                    ui.selectable_value(
+                                        &mut form.biased_scale,
+                                        Exponential,
+                                        format!("{:?}", Exponential),
+                                    );
+                                });
+
+                            let mut slider = egui::Slider::new(
+                                &mut form.scale_factor,
+                                match form.biased_scale {
+                                    Multiplicative | Order => 1.0..=5.0,
+                                    Exponential => 1.2..=2.50,
+                                },
+                            )
+                            .text("Bias Scale");
+                            slider = match form.biased_scale {
+                                Multiplicative => slider.prefix("N*"),
+                                Order => slider.prefix("N^"),
+                                Exponential => slider.suffix("^N"),
+                            };
+                            ui.add(slider);
 
                             let simulation_button = ui.add_enabled(
                                 self.is_valid_form_state()
@@ -119,43 +153,42 @@ impl epi::App for TemplateApp {
 
                                 ui.horizontal_wrapped(|ui| {
                                     ui.label("Generation: ");
-                                    ui.label(
-                                        egui::RichText::new(
-                                            simulation.generation_counter.to_string(),
-                                        )
-                                        .color(egui::Color32::LIGHT_GRAY),
-                                    );
+                                    let mut label = egui::RichText::new(
+                                        simulation.generation_counter.to_string(),
+                                    )
+                                    .color(egui::Color32::LIGHT_GRAY);
+                                    if simulation.has_finished {
+                                        label = label.color(egui::Color32::GOLD);
+                                    }
+
+                                    ui.label(label);
                                 });
 
                                 ui.horizontal_wrapped(|ui| {
                                     ui.label("Target: ");
                                     ui.label(
                                         egui::RichText::new(&simulation.target_term)
-                                            .color(egui::Color32::KHAKI),
+                                            .color(egui::Color32::GOLD),
                                     );
                                 });
                             });
-                            if !simulation.has_finished {
-                                ui.add(egui::Spinner::new());
-                            }
                         }
                     });
             });
 
         if let Some(simulation) = &mut self.running_simulation {
             egui::CentralPanel::default().show(ctx, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.visuals_mut().dark_mode = false;
-                    ui.label(
-                        egui::RichText::new(
-                            simulation.population[simulation.best_candidate]
-                                .genes
-                                .iter()
-                                .collect::<String>(),
-                        )
-                        .underline()
-                        .color(egui::Color32::GOLD),
-                    );
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 0.0;
+                    let best_candidate = &simulation.population[simulation.best_candidate];
+
+                    for (idx, token) in simulation.target_term.char_indices() {
+                        let mut label = egui::RichText::new(best_candidate.genes[idx]).underline();
+                        if token == best_candidate.genes[idx] {
+                            label = label.color(egui::Color32::GOLD);
+                        }
+                        ui.label(label);
+                    }
                 });
                 ui.separator();
                 ui.separator();

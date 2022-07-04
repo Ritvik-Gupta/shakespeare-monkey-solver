@@ -1,29 +1,36 @@
-use super::dna::Dna;
+use super::{biased_scale::BiasedScale, dna::Dna};
 
 pub struct Population {
     pub(super) next_gen_population: Vec<Dna>,
     pub population: Vec<Dna>,
     pub target_term: String,
     pub mutation_rate: usize,
+    pub biased_scale: BiasedScale,
 }
 
 impl Population {
-    pub fn new(target_term: String, mutation_rate: usize, population_size: usize) -> Self {
+    pub fn new(
+        target_term: String,
+        mutation_rate: usize,
+        population_size: usize,
+        biased_scale: BiasedScale,
+    ) -> Self {
         let population = std::iter::repeat_with(|| Dna::crate_random_genes(target_term.len()))
             .take(population_size)
             .collect::<Vec<_>>();
         Self {
             next_gen_population: population.clone(),
             population,
-            mutation_rate,
             target_term,
+            mutation_rate,
+            biased_scale,
         }
     }
 
     pub fn compute_biased_fitness(&mut self) {
         for candidate in self.population.iter_mut() {
             let fitness = candidate.compute_fitness(&self.target_term);
-            candidate.biased_fitness = fitness as f64;
+            candidate.biased_fitness = self.biased_scale.scale(fitness as f64);
         }
     }
 
@@ -55,54 +62,3 @@ impl Population {
         &self.population[weighted_indices.sample(&mut rand::thread_rng())]
     }
 }
-
-/*
-
-  // Compute the current "most fit" member of the population
-  evaluate() {
-    let worldrecord = 0.0;
-    let index = 0;
-    for (let i = 0; i < this.population.length; i++) {
-      if (this.population[i].fitness > worldrecord) {
-        index = i;
-        worldrecord = this.population[i].fitness;
-      }
-    }
-
-    this.best = this.population[index].getPhrase();
-    if (worldrecord === this.perfectScore) {
-      this.finished = true;
-    }
-  }
-
-  isFinished() {
-    return this.finished;
-  }
-
-  getGenerations() {
-    return this.generations;
-  }
-
-  // Compute average fitness for the population
-  getAverageFitness() {
-    let total = 0;
-    for (let i = 0; i < this.population.length; i++) {
-      total += this.population[i].fitness;
-    }
-    return total / this.population.length;
-  }
-
-  allPhrases() {
-    let everything = "";
-
-    let displayLimit = min(this.population.length, 50);
-
-    for (let i = 0; i < displayLimit; i++) {
-      everything += this.population[i].getPhrase() + "<br>";
-    }
-    return everything;
-  }
-}
-
-
-*/
