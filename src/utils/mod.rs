@@ -1,8 +1,9 @@
 #[cfg(not(target_arch = "wasm32"))]
 pub mod random {
-    use rand::distributions::WeightedIndex;
-    use rand::{prelude::ThreadRng, Rng};
+    use rand::{distributions::WeightedIndex, prelude::ThreadRng, Rng};
     use std::ops::Range;
+
+    const WEIGHTED_OFFSET: f64 = 0.1;
 
     pub struct Random(ThreadRng);
 
@@ -24,7 +25,10 @@ pub mod random {
 
     impl WeightedIndices {
         pub fn create(iter: impl Iterator<Item = f64>) -> Self {
-            Self(WeightedIndex::new(iter).expect("Could not create Weighted Index"))
+            Self(
+                WeightedIndex::new(iter.map(|val| val + WEIGHTED_OFFSET))
+                    .expect("Could not create Weighted Index"),
+            )
         }
 
         pub fn sample(&self, rng: &mut Random) -> usize {
