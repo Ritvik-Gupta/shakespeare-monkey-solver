@@ -1,9 +1,9 @@
 mod state;
 
-use eframe::{egui, epi};
+use eframe::{egui, CreationContext};
 use state::{
-    biased_scale::BiasedScaleStore::*, population_builder::PopulationBuilder,
-    population_store::PopulationStore,
+    biased_scale::BiasedScaleStore::*, population::PopulationStore,
+    population_builder::PopulationBuilder,
 };
 
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
@@ -15,35 +15,39 @@ pub struct TemplateApp {
     running_simulation: Option<PopulationStore>,
 }
 
-impl epi::App for TemplateApp {
-    fn name(&self) -> &str {
-        "shakespeare-monkey-solver"
-    }
-
-    fn setup(
-        &mut self,
-        _ctx: &egui::Context,
-        _frame: &epi::Frame,
-        _storage: Option<&dyn epi::Storage>,
-    ) {
+impl TemplateApp {
+    pub fn setup(&mut self, _cc: &CreationContext) {
         #[cfg(feature = "persistence")]
-        if let Some(storage) = _storage {
-            *self = epi::get_value(storage, epi::APP_KEY).unwrap_or_default()
+        if let Some(storage) = _cc.storage {
+            *self = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
         }
     }
+}
 
+impl eframe::App for TemplateApp {
     #[cfg(feature = "persistence")]
-    fn save(&mut self, storage: &mut dyn epi::Storage) {
-        epi::set_value(storage, epi::APP_KEY, self);
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
-    fn update(&mut self, ctx: &egui::Context, _frame: &epi::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        #[cfg(feature = "puffin_profile")]
+        puffin::profile_function!();
+
+        #[cfg(feature = "puffin_profile")]
+        puffin::GlobalProfiler::lock().new_frame();
+
         if let Some(simulation) = &mut self.running_simulation {
+            #[cfg(feature = "puffin_profile")]
+            puffin::profile_scope!("Generation");
+
             simulation.simulate_generation();
             if !simulation.has_finished {
                 ctx.request_repaint();
             }
         }
+
+        ctx.set_visuals(egui::style::Visuals::dark());
 
         if let Some(simulation) = &mut self.running_simulation {
             egui::Window::new("Fitness Plot").show(ctx, |ui| {

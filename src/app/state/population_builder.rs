@@ -1,4 +1,4 @@
-use super::{biased_scale::BiasedScaleStore, population_store::PopulationStore};
+use super::{biased_scale::BiasedScaleStore, population::PopulationStore};
 use crate::core::population::Population;
 
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]

@@ -72,10 +72,9 @@ impl Dna {
 
     pub fn mutate(&mut self, mutation_rate: usize) {
         let mut rng = Random::new();
-        self.genes.iter_mut().for_each(|gene| {
-            if rng.gen_range_usize(0..101) < mutation_rate {
-                *gene = gen_random_char();
-            }
-        });
+        self.genes
+            .iter_mut()
+            .filter(|_| rng.gen_range_usize(0..101) < mutation_rate)
+            .for_each(|gene| *gene = gen_random_char());
     }
 }

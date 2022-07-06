@@ -2,17 +2,12 @@ use crate::core::biased_scale::BiasedScale;
 use BiasedScaleStore::*;
 
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub enum BiasedScaleStore {
+    #[default]
     Multiplicative,
     Order,
     Exponential,
-}
-
-impl Default for BiasedScaleStore {
-    fn default() -> Self {
-        Multiplicative
-    }
 }
 
 impl Into<BiasedScale> for (BiasedScaleStore, f64) {
