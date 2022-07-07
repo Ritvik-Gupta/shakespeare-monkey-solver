@@ -32,10 +32,10 @@ impl eframe::App for TemplateApp {
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         #[cfg(feature = "puffin_profile")]
-        puffin::profile_function!();
+        puffin::GlobalProfiler::lock().new_frame();
 
         #[cfg(feature = "puffin_profile")]
-        puffin::GlobalProfiler::lock().new_frame();
+        puffin::profile_function!();
 
         if let Some(simulation) = &mut self.running_simulation {
             #[cfg(feature = "puffin_profile")]

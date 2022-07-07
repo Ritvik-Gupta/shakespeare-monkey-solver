@@ -1,24 +1,38 @@
 use crate::utils::random::Random;
 
-const fn generate_charset() -> [char; 53] {
-    let mut charset = [' '; 53];
+const SPECIAL_SYMBOLS: [char; 14] = [
+    ' ', '-', '(', ')', '[', ']', '"', '\'', '/', '.', ',', '_', '!', ':',
+];
+
+const fn generate_charset() -> [char; 26 * 2 + SPECIAL_SYMBOLS.len()] {
+    let mut charset = [' '; 26 * 2 + SPECIAL_SYMBOLS.len()];
 
     let mut i = 0;
-    while i < 26 {
-        charset[i] = (i as u8 + b'a') as char;
+    let mut j = 0;
+    while i < SPECIAL_SYMBOLS.len() {
+        charset[j] = SPECIAL_SYMBOLS[i];
         i += 1;
+        j += 1;
     }
 
     let mut i = 0;
     while i < 26 {
-        charset[i + 27] = (i as u8 + b'A') as char;
+        charset[j] = (i as u8 + b'a') as char;
         i += 1;
+        j += 1;
+    }
+
+    let mut i = 0;
+    while i < 26 {
+        charset[j] = (i as u8 + b'A') as char;
+        i += 1;
+        j += 1;
     }
 
     charset
 }
 
-static CHARSET: [char; 53] = generate_charset();
+static CHARSET: [char; 26 * 2 + SPECIAL_SYMBOLS.len()] = generate_charset();
 
 fn gen_random_char() -> char {
     CHARSET[Random::new().gen_range_usize(0..CHARSET.len())]

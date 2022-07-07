@@ -3,8 +3,6 @@ pub mod random {
     use rand::{distributions::WeightedIndex, prelude::ThreadRng, Rng};
     use std::ops::Range;
 
-    const WEIGHTED_OFFSET: f64 = 0.1;
-
     pub struct Random(ThreadRng);
 
     impl Random {
@@ -21,12 +19,14 @@ pub mod random {
         }
     }
 
+    const WEIGHTED_INDEX_OFFSET: f64 = 0.1;
+
     pub struct WeightedIndices(WeightedIndex<f64>);
 
     impl WeightedIndices {
         pub fn create(iter: impl Iterator<Item = f64>) -> Self {
             Self(
-                WeightedIndex::new(iter.map(|val| val + WEIGHTED_OFFSET))
+                WeightedIndex::new(iter.map(|val| val + WEIGHTED_INDEX_OFFSET))
                     .expect("Could not create Weighted Index"),
             )
         }
