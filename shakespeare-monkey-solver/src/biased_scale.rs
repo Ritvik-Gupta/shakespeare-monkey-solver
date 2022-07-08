@@ -1,5 +1,6 @@
 use BiasedScale::*;
 
+#[derive(PartialEq)]
 pub enum BiasedScale {
     Multiplicative(f64),
     Order(f64),

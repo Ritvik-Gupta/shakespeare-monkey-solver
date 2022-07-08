@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::core::population::Population;
+use shakespeare_monkey_solver::population::Population;
 
 pub struct PopulationStore {
     pub store: Population,

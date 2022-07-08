@@ -3,4 +3,4 @@
 /target
 Cargo.lock
 
-docs/shakespeare_monkey_solver*
+**/docs/egui_demo*

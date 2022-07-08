@@ -4,7 +4,7 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    use shakespeare_monkey_solver::TemplateApp;
+    use egui_demo::TemplateApp;
 
     #[cfg(feature = "puffin_profile")]
     start_puffin_server();
@@ -14,11 +14,7 @@ fn main() {
         eframe::NativeOptions {
             ..eframe::NativeOptions::default()
         },
-        Box::new(|cc| {
-            let mut app = TemplateApp::default();
-            app.setup(cc);
-            Box::new(app)
-        }),
+        Box::new(|cc| Box::new(TemplateApp::new(cc))),
     );
 }
 

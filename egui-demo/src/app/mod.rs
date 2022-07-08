@@ -16,11 +16,12 @@ pub struct TemplateApp {
 }
 
 impl TemplateApp {
-    pub fn setup(&mut self, _cc: &CreationContext) {
+    pub fn new(_cc: &CreationContext) -> Self {
         #[cfg(feature = "persistence")]
         if let Some(storage) = _cc.storage {
-            *self = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
+            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
+        Self::default()
     }
 }
 

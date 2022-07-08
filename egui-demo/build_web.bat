@@ -51,7 +51,7 @@ cargo build -p %CRATE_NAME% --release --lib --target wasm32-unknown-unknown
 
 echo Generating JS bindings for wasm...
 SET TARGET_NAME=%CRATE_NAME_SNAKE_CASE%.wasm
-wasm-bindgen ".\target\wasm32-unknown-unknown\%BUILD%\%TARGET_NAME%" --out-dir "docs" --target no-modules
+wasm-bindgen "..\target\wasm32-unknown-unknown\%BUILD%\%TARGET_NAME%" --out-dir "docs" --target no-modules
 
 IF %FAST% == 0 (
   echo Optimizing wasm...

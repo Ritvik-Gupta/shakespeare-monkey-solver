@@ -1,5 +1,5 @@
 use super::{biased_scale::BiasedScaleStore, population::PopulationStore};
-use crate::core::population::Population;
+use shakespeare_monkey_solver::population::Population;
 
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
 pub struct PopulationBuilder {
@@ -29,7 +29,7 @@ impl PopulationBuilder {
                 self.target_term.clone(),
                 self.mutation_rate,
                 self.population_size,
-                (self.biased_scale.clone(), self.scale_factor).into(),
+                self.biased_scale.build_with_factor(self.scale_factor),
             ),
             generation_counter: 0,
             best_candidate: 0,
@@ -44,6 +44,6 @@ impl PartialEq<&PopulationStore> for PopulationBuilder {
         self.population_size == other.population.len()
             && self.target_term == other.target_term
             && self.mutation_rate == other.mutation_rate
-            && (self.biased_scale.clone(), self.scale_factor) == other.biased_scale
+            && self.biased_scale.build_with_factor(self.scale_factor) == other.biased_scale
     }
 }
