@@ -22,9 +22,7 @@ impl PopulationStore {
     fn compute_biased_fitness_and_best_candidate(&mut self) {
         self.store.compute_biased_fitness();
 
-        let pop = &self.store.population;
-
-        for (idx, candidate) in pop.iter().enumerate() {
+        for (idx, candidate) in self.store.population.iter().enumerate() {
             if candidate.fitness > self.store.population[self.best_candidate].fitness {
                 self.best_candidate = idx;
             }

@@ -2,6 +2,7 @@
 members = [
     "shakespeare-monkey-solver",
     "egui-demo",
+    "data-visualization",
 ]
 
 [profile.release]

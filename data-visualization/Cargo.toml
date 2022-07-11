@@ -1,0 +1,13 @@
+[package]
+name = "data-visualization"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "data_visualization"
+crate-type = ["cdylib"]
+
+[dependencies]
+shakespeare-monkey-solver = { path = "../shakespeare-monkey-solver" }
+pyo3 = { version = "0.16.5", features = ["extension-module"] }
+rayon = "1.5.3" 

@@ -1,13 +1,25 @@
+use once_cell::sync::Lazy;
+use random::Random;
+use std::sync::Mutex;
+
+pub static RNG: Lazy<Mutex<Random>> = Lazy::new(|| Mutex::new(Random::new()));
+
 #[cfg(not(target_arch = "wasm32"))]
 pub mod random {
-    use rand::{distributions::WeightedIndex, prelude::ThreadRng, Rng};
+    use rand::{distributions::WeightedIndex, Rng, SeedableRng};
+    use rand_chacha::ChaCha12Rng;
     use std::ops::Range;
 
-    pub struct Random(ThreadRng);
+    use crate::utils::RNG;
+
+    pub struct Random(ChaCha12Rng);
 
     impl Random {
         pub fn new() -> Self {
-            Random(rand::thread_rng())
+            Random(match option_env!("RANDOM_SEED") {
+                Some(seed) => ChaCha12Rng::seed_from_u64(seed.parse().unwrap()),
+                None => ChaCha12Rng::from_rng(rand::thread_rng()).unwrap(),
+            })
         }
 
         pub fn gen_range_usize(&mut self, range: Range<usize>) -> usize {
@@ -31,10 +43,10 @@ pub mod random {
             )
         }
 
-        pub fn sample(&self, rng: &mut Random) -> usize {
+        pub fn sample(&self) -> usize {
             use rand::prelude::Distribution;
 
-            self.0.sample(&mut rng.0)
+            self.0.sample(&mut RNG.lock().unwrap().0)
         }
     }
 }

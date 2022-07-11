@@ -1,5 +1,5 @@
 use super::{biased_scale::BiasedScale, dna::Dna};
-use crate::utils::random::{Random, WeightedIndices};
+use crate::utils::random::WeightedIndices;
 
 pub struct Population {
     pub(super) next_gen_population: Vec<Dna>,
@@ -55,6 +55,6 @@ impl Population {
     }
 
     fn pool_selection(&self, weighted_indices: &WeightedIndices) -> &Dna {
-        &self.population[weighted_indices.sample(&mut Random::new())]
+        &self.population[weighted_indices.sample()]
     }
 }

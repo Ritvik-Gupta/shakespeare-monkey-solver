@@ -1,4 +1,4 @@
-use crate::utils::random::Random;
+use crate::utils::{RNG};
 
 const SPECIAL_SYMBOLS: [char; 14] = [
     ' ', '-', '(', ')', '[', ']', '"', '\'', '/', '.', ',', '_', '!', ':',
@@ -35,7 +35,7 @@ const fn generate_charset() -> [char; 26 * 2 + SPECIAL_SYMBOLS.len()] {
 static CHARSET: [char; 26 * 2 + SPECIAL_SYMBOLS.len()] = generate_charset();
 
 fn gen_random_char() -> char {
-    CHARSET[Random::new().gen_range_usize(0..CHARSET.len())]
+    CHARSET[RNG.lock().unwrap().gen_range_usize(0..CHARSET.len())]
 }
 
 #[derive(Clone, Debug)]
@@ -71,7 +71,10 @@ impl Dna {
             biased_fitness: 0.0,
         };
 
-        let midpoint = Random::new().gen_range_usize(0..partner_a.genes.len());
+        let midpoint = RNG
+            .lock()
+            .unwrap()
+            .gen_range_usize(0..partner_a.genes.len());
 
         for i in 0..partner_a.genes.len() {
             child.genes.push(if i > midpoint {
@@ -85,10 +88,9 @@ impl Dna {
     }
 
     pub fn mutate(&mut self, mutation_rate: usize) {
-        let mut rng = Random::new();
         self.genes
             .iter_mut()
-            .filter(|_| rng.gen_range_usize(0..101) < mutation_rate)
+            .filter(|_| RNG.lock().unwrap().gen_range_usize(0..101) < mutation_rate)
             .for_each(|gene| *gene = gen_random_char());
     }
 }
