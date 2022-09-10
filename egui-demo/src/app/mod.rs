@@ -1,6 +1,6 @@
 mod state;
 
-use eframe::{egui, CreationContext};
+use eframe::egui;
 use state::{
     biased_scale::BiasedScaleStore::*, population::PopulationStore,
     population_builder::PopulationBuilder,
@@ -16,7 +16,7 @@ pub struct TemplateApp {
 }
 
 impl TemplateApp {
-    pub fn new(_cc: &CreationContext) -> Self {
+    pub fn new(_cc: &eframe::CreationContext) -> Self {
         #[cfg(feature = "persistence")]
         if let Some(storage) = _cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
@@ -61,11 +61,14 @@ impl eframe::App for TemplateApp {
                     .allow_zoom(false)
                     .show_background(false)
                     .show(ui, |ui| {
-                        ui.line(egui::plot::Line::new(egui::plot::Values::from_values_iter(
-                            simulation.best_generation_fitness.iter().enumerate().map(
-                                |(idx, &best)| egui::plot::Value::new(idx as f64, best as f64),
-                            ),
-                        )));
+                        ui.line(egui::plot::Line::new(
+                            simulation
+                                .best_generation_fitness
+                                .iter()
+                                .enumerate()
+                                .map(|(idx, &best)| [idx as f64, best as f64])
+                                .collect::<egui::plot::PlotPoints>(),
+                        ));
                     });
             });
         }
